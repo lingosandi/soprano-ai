@@ -74,6 +74,8 @@ export interface VoiceAgentDeps {
     compactionProviderConfig?: LLMProviderConfig | null
     /** Override the default spoken system prompt. */
     systemPrompt?: string
+    /** Greeting guidance passed to the LLM during init(); not spoken verbatim. */
+    greetingMessage?: string
     /** LLM sampling temperature for voice turns. */
     llmTemperature?: number
     /** Max completion tokens per voice turn. */
@@ -131,6 +133,7 @@ export class VoiceAgentService extends ToolCallingAgentBase {
 
     private readonly asrApiKey: string
     private readonly systemPrompt: string
+    private readonly greetingMessage: string | null
     private readonly llmTemperature: number
     private readonly llmMaxTokens: number
     private readonly llmRequestExtraBody: Record<string, unknown>
@@ -180,6 +183,7 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         this.asrOverrides = deps.asrOptions ?? {}
         this.asrApiKey = deps.apiKeys.asrApiKey ?? deps.apiKeys.qwenApiKey
         this.systemPrompt = deps.systemPrompt ?? VOICE_AGENT_SYSTEM_PROMPT
+        this.greetingMessage = deps.greetingMessage?.trim() || null
         this.llmTemperature = deps.llmTemperature ?? VOICE_LLM_TEMPERATURE
         this.llmMaxTokens = deps.llmMaxTokens ?? VOICE_LLM_MAX_TOKENS
         this.llmRequestExtraBody = deps.llmRequestExtraBody ?? VOICE_LLM_REQUEST_EXTRA_BODY
@@ -845,11 +849,13 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         const hasHistory = this.memory
             ? this.memory.getCurrentTurn() > 0
             : this.conversationHistory.length > 1
-        const instruction = JSON.stringify({
-            note: hasHistory
-                ? "The user just reconnected to the voice agent. They are a returning user — you have memory of prior sessions (see Conversation Memory above). Generate a brief, natural greeting that acknowledges this is a continuing relationship. Do NOT say this is your first conversation."
-                : "The user just connected to the voice agent for the first time. Generate a brief, natural greeting (one short sentence). Vary your phrasing — don't repeat the same greeting every time.",
-        })
+        const baseNote = hasHistory
+            ? "The user just reconnected to the voice agent. They are a returning user — you have memory of prior sessions (see Conversation Memory above). Generate a brief, natural greeting that acknowledges this is a continuing relationship. Do NOT say this is your first conversation."
+            : "The user just connected to the voice agent for the first time. Generate a brief, natural greeting (one short sentence). Vary your phrasing — don't repeat the same greeting every time."
+        const note = this.greetingMessage
+            ? `${baseNote} Use this configured greeting reference for tone, content, or positioning, but do not repeat it verbatim every time: ${this.greetingMessage}`
+            : baseNote
+        const instruction = JSON.stringify({ note })
         await this.appendHistoryMessage({
             role: "tool",
             content: instruction,

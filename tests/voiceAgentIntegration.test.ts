@@ -438,6 +438,7 @@ function createTestAgent(
         backgroundTaskPoller?: () => Promise<BackgroundToolResult[]>
         memory?: any
         ttsVoiceId?: string
+        greetingMessage?: string
     }
 ): { agent: VoiceAgentService; deps: TestDeps } {
     const player = new MockAudioPlayer()
@@ -462,6 +463,7 @@ function createTestAgent(
         backgroundTaskPoller: options?.backgroundTaskPoller,
         memory: options?.memory,
         ttsVoiceId: options?.ttsVoiceId,
+        greetingMessage: options?.greetingMessage,
     })
 
     agent.on({
@@ -606,6 +608,27 @@ describe("VoiceAgentService integration — init", () => {
 
         // The greeting produces an LLM response
         expect(deps.fullResponses.length).toBeGreaterThanOrEqual(1)
+        agent.destroy()
+    })
+
+    test("init passes configured greeting message as LLM guidance", async () => {
+        const generatedGreeting = "Fresh generated greeting."
+        const { mockFetch, calls } = createMockLLMFetch(generatedGreeting)
+        const greetingMessage = "Hey, I'm ready when you are."
+        const { agent, deps } = createTestAgent(mockFetch, { greetingMessage })
+
+        await agent.init()
+        await settle(200)
+
+        expect(calls.length).toBeGreaterThan(0)
+        const body = JSON.parse(calls[0].init.body)
+        const messages = JSON.stringify(body.messages)
+        expect(messages).toContain(greetingMessage)
+        expect(messages).toContain("do not repeat it verbatim")
+        expect(deps.fullResponses).toContain(generatedGreeting)
+        expect(deps.fullResponses).not.toContain(greetingMessage)
+        expect(deps.player.enqueuedChunks.length).toBeGreaterThan(0)
+        expect(deps.asr.startCallCount).toBeGreaterThanOrEqual(1)
         agent.destroy()
     })
 })

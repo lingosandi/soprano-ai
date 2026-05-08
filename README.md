@@ -23,6 +23,23 @@ const agent = createSopranoVoiceAgent({
 })
 ```
 
+## Prompt and greeting
+
+Use `systemPrompt` to replace the default voice-agent persona. Use `greetingMessage` to guide the greeting generated during `init()`; the LLM still writes a fresh greeting and should not repeat this text verbatim every time:
+
+```ts
+const agent = createSopranoVoiceAgent({
+  player: new AudioStreamPlayer(),
+  asr: new FunASRService({ bridgeUrl: () => "ws://127.0.0.1:9231" }),
+  apiKeys: {
+    qwenApiKey: "YOUR_QWEN_DASHSCOPE_API_KEY",
+    cartesiaApiKey: "YOUR_CARTESIA_API_KEY",
+  },
+  systemPrompt: "You are a concise, warm voice assistant.",
+  greetingMessage: "Hey, I'm ready when you are.",
+})
+```
+
 ## TTS voice and quality
 
 Cartesia TTS defaults to the package voice and the original low-quality 8 kHz PCM stream. To choose a different Cartesia voice, pass its voice ID as `ttsVoiceId`. To opt into higher-quality 24 kHz PCM, pass the same quality to the default TTS config and to `AudioStreamPlayer`:

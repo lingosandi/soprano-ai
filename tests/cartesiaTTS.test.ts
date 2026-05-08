@@ -10,6 +10,8 @@ import {
     CARTESIA_MODEL_ID,
     CARTESIA_VOICE_ID,
     CARTESIA_OUTPUT_FORMAT,
+    CARTESIA_HIGH_QUALITY_SAMPLE_RATE,
+    PLAYBACK_SAMPLE_RATE,
 } from "../src/config"
 import { CartesiaTTS } from "../src"
 
@@ -68,8 +70,8 @@ afterEach(() => {
     globalThis.WebSocket = originalWebSocket
 })
 
-async function createTTS() {
-    return new CartesiaTTS("test-api-key")
+async function createTTS(options?: ConstructorParameters<typeof CartesiaTTS>[1]) {
+    return new CartesiaTTS("test-api-key", options)
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +108,36 @@ describe("CartesiaTTS", () => {
         expect(msg.context_id).toBe("ctx-1")
         expect(msg.continue).toBe(true)
         expect(msg.transcript).toBe("Hello ")
+
+        tts.disconnect()
+    })
+
+    test("defaults to low-quality output format", async () => {
+        const tts = await createTTS()
+        await tts.connect()
+        const ws = wsInstances[0]
+
+        await tts.sendChunk("ctx-low", "Hello ", true)
+
+        const msg = JSON.parse(ws.sentMessages[0])
+        expect(msg.output_format.sample_rate).toBe(PLAYBACK_SAMPLE_RATE)
+        expect(tts.sampleRate).toBe(PLAYBACK_SAMPLE_RATE)
+
+        tts.disconnect()
+    })
+
+    test("can send high-quality output format", async () => {
+        const tts = await createTTS({ quality: "high" })
+        await tts.connect()
+        const ws = wsInstances[0]
+
+        await tts.sendChunk("ctx-high", "Hello ", true)
+
+        const msg = JSON.parse(ws.sentMessages[0])
+        expect(msg.output_format.container).toBe(CARTESIA_OUTPUT_FORMAT.container)
+        expect(msg.output_format.encoding).toBe(CARTESIA_OUTPUT_FORMAT.encoding)
+        expect(msg.output_format.sample_rate).toBe(CARTESIA_HIGH_QUALITY_SAMPLE_RATE)
+        expect(tts.sampleRate).toBe(CARTESIA_HIGH_QUALITY_SAMPLE_RATE)
 
         tts.disconnect()
     })

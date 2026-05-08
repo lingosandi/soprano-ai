@@ -18,6 +18,7 @@ import {
     VOICE_LLM_MAX_TOKENS,
     VOICE_LLM_REQUEST_EXTRA_BODY,
     VOICE_LLM_TEMPERATURE,
+    type CartesiaTTSQuality,
 } from "./config"
 import { toError } from "./audio-helpers"
 import type {
@@ -79,6 +80,8 @@ export interface VoiceAgentDeps {
     llmMaxTokens?: number
     /** Provider-specific request fields merged into each voice LLM request. */
     llmRequestExtraBody?: Record<string, unknown>
+    /** Cartesia PCM quality for the default TTS instance. Defaults to low. */
+    ttsQuality?: CartesiaTTSQuality
     /** Pre-created TTS implementation, useful for tests or custom Cartesia settings. */
     tts?: CartesiaTTS
     /** Platform-specific ASR tuning overrides (e.g. longer silence for BLE mics). */
@@ -163,7 +166,9 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         })
 
         // TTS: Cartesia WebSocket
-        this.tts = deps.tts ?? new CartesiaTTS(deps.apiKeys.cartesiaApiKey)
+        this.tts = deps.tts ?? new CartesiaTTS(deps.apiKeys.cartesiaApiKey, {
+            quality: deps.ttsQuality,
+        })
 
         // Platform-specific injected dependencies
         this.player = deps.player

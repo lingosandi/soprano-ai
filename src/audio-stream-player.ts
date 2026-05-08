@@ -6,17 +6,31 @@
  * samples start playing the moment they are decoded.
  */
 
-import { PLAYBACK_SAMPLE_RATE } from "./config"
+import {
+    PLAYBACK_SAMPLE_RATE,
+    getCartesiaSampleRate,
+    type CartesiaTTSQuality,
+} from "./config"
 import type { IAudioPlayer } from "./voice-agent-types"
 
-const SAMPLE_RATE = PLAYBACK_SAMPLE_RATE
+export interface AudioStreamPlayerOptions {
+    /** Match the Cartesia TTS quality when using the default Cartesia stream. */
+    quality?: CartesiaTTSQuality
+    /** Explicit PCM sample rate override. Takes precedence over quality. */
+    sampleRate?: number
+}
 
 export class AudioStreamPlayer implements IAudioPlayer {
+    readonly sampleRate: number
     private ctx: AudioContext | null = null
     private nextStartTime = 0
     private gainNode: GainNode | null = null
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
+
+    constructor(options: AudioStreamPlayerOptions = {}) {
+        this.sampleRate = options.sampleRate ?? getCartesiaSampleRate(options.quality ?? "low")
+    }
 
     /** Initialize the AudioContext. Must be called from a user gesture. */
     async init(): Promise<void> {
@@ -25,7 +39,7 @@ export class AudioStreamPlayer implements IAudioPlayer {
             if (this.ctx.state === "suspended") await this.ctx.resume()
             return
         }
-        this.ctx = new AudioContext({ sampleRate: SAMPLE_RATE })
+        this.ctx = new AudioContext({ sampleRate: this.sampleRate })
         this.gainNode = this.ctx.createGain()
 
         // Analyser for output level metering
@@ -58,7 +72,7 @@ export class AudioStreamPlayer implements IAudioPlayer {
             this.ctx.resume().catch(() => {})
         }
 
-        const buffer = this.ctx.createBuffer(1, samples.length, SAMPLE_RATE)
+        const buffer = this.ctx.createBuffer(1, samples.length, this.sampleRate)
         buffer.getChannelData(0).set(samples)
 
         const source = this.ctx.createBufferSource()

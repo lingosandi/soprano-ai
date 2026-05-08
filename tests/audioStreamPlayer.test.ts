@@ -5,7 +5,10 @@
  * GainNode, AudioBuffer, and AudioBufferSourceNode.
  */
 import { describe, expect, test, beforeEach, afterEach } from "vitest"
-import { PLAYBACK_SAMPLE_RATE } from "../src/config"
+import {
+    CARTESIA_HIGH_QUALITY_SAMPLE_RATE,
+    PLAYBACK_SAMPLE_RATE,
+} from "../src/config"
 import { AudioStreamPlayer } from "../src"
 
 // ---------------------------------------------------------------------------
@@ -113,13 +116,39 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("AudioStreamPlayer", () => {
-    test("init creates AudioContext with 24 kHz sample rate", async () => {
+    test("init creates AudioContext with default low-quality sample rate", async () => {
         const player = new AudioStreamPlayer()
         await player.init()
 
-        // The mock doesn't store itself globally, but we can verify by
-        // enqueueing and checking the buffer source is created
+        const ctx = (player as any).ctx as MockAudioContext
+        expect(player.sampleRate).toBe(PLAYBACK_SAMPLE_RATE)
+        expect(ctx.sampleRate).toBe(PLAYBACK_SAMPLE_RATE)
         expect(player.isPlaying).toBe(false)
+        player.stop()
+    })
+
+    test("high quality uses matching 24 kHz sample rate", async () => {
+        const player = new AudioStreamPlayer({ quality: "high" })
+        await player.init()
+
+        const ctx = (player as any).ctx as MockAudioContext
+        expect(player.sampleRate).toBe(CARTESIA_HIGH_QUALITY_SAMPLE_RATE)
+        expect(ctx.sampleRate).toBe(CARTESIA_HIGH_QUALITY_SAMPLE_RATE)
+
+        player.enqueue(new Float32Array(CARTESIA_HIGH_QUALITY_SAMPLE_RATE / 10))
+        expect(ctx._sources[0].buffer.sampleRate).toBe(CARTESIA_HIGH_QUALITY_SAMPLE_RATE)
+
+        player.stop()
+    })
+
+    test("explicit sample rate overrides quality", async () => {
+        const player = new AudioStreamPlayer({ quality: "high", sampleRate: 16_000 })
+        await player.init()
+
+        const ctx = (player as any).ctx as MockAudioContext
+        expect(player.sampleRate).toBe(16_000)
+        expect(ctx.sampleRate).toBe(16_000)
+
         player.stop()
     })
 
@@ -127,11 +156,10 @@ describe("AudioStreamPlayer", () => {
         const player = new AudioStreamPlayer()
         await player.init()
 
-        const samples = new Float32Array(2400) // 100ms at 24kHz
+        const samples = new Float32Array(PLAYBACK_SAMPLE_RATE / 10)
         player.enqueue(samples)
 
         // After enqueue, isPlaying should be true (nextStartTime > currentTime)
-        // Mock currentTime is 0, buffer duration = 2400/24000 = 0.1
         expect(player.isPlaying).toBe(true)
 
         player.stop()

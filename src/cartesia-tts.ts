@@ -21,7 +21,9 @@ import {
     CARTESIA_VERSION,
     CARTESIA_MODEL_ID,
     CARTESIA_VOICE_ID,
-    CARTESIA_OUTPUT_FORMAT,
+    getCartesiaOutputFormat,
+    type CartesiaOutputFormat,
+    type CartesiaTTSQuality,
 } from "./config"
 
 import type { CartesiaTTSCallbacks } from "./voice-agent-types"
@@ -31,8 +33,14 @@ import { toError } from "./audio-helpers"
 // CartesiaTTS
 // ---------------------------------------------------------------------------
 
+export interface CartesiaTTSOptions {
+    /** Audio quality for generated PCM. Defaults to low for existing behaviour. */
+    quality?: CartesiaTTSQuality
+}
+
 export class CartesiaTTS {
     private apiKey: string
+    private readonly outputFormat: CartesiaOutputFormat
     private ws: WebSocket | null = null
     private callbacks: CartesiaTTSCallbacks = {}
     private connectPromise: Promise<void> | null = null
@@ -63,8 +71,13 @@ export class CartesiaTTS {
      */
     private completedContexts = new Set<string>()
 
-    constructor(apiKey: string) {
+    constructor(apiKey: string, options: CartesiaTTSOptions = {}) {
         this.apiKey = apiKey
+        this.outputFormat = getCartesiaOutputFormat(options.quality ?? "low")
+    }
+
+    get sampleRate(): number {
+        return this.outputFormat.sample_rate
     }
 
     // -----------------------------------------------------------------------
@@ -314,7 +327,7 @@ export class CartesiaTTS {
                 mode: "id",
                 id: CARTESIA_VOICE_ID,
             },
-            output_format: CARTESIA_OUTPUT_FORMAT,
+            output_format: this.outputFormat,
             context_id: contextId,
             continue: isContinuation,
         }

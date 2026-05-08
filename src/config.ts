@@ -131,6 +131,14 @@ export const ASR_LANGUAGE_HINTS: readonly string[] = ["en", "zh"]
 /** Playback sample rate — 8 kHz for telephone-quality audio. */
 export const PLAYBACK_SAMPLE_RATE = 8_000
 
+export type CartesiaTTSQuality = "low" | "high"
+
+export interface CartesiaOutputFormat {
+   container: "raw"
+   encoding: "pcm_s16le"
+   sample_rate: number
+}
+
 // ---------------------------------------------------------------------------
 // TTS — Cartesia WebSocket
 // ---------------------------------------------------------------------------
@@ -140,12 +148,36 @@ export const CARTESIA_VERSION = "2024-06-10"
 export const CARTESIA_MODEL_ID = "sonic-3"
 export const CARTESIA_VOICE_ID = "6ccbfb76-1fc6-48f7-b71d-91ac6298247b" // Tessa
 
-/** PCM 16-bit LE at PLAYBACK_SAMPLE_RATE — telephone-quality for authentic call feel. */
-export const CARTESIA_OUTPUT_FORMAT = {
-    container: "raw",
-    encoding: "pcm_s16le",
-    sample_rate: PLAYBACK_SAMPLE_RATE,
-} as const
+const CARTESIA_LOW_QUALITY_SAMPLE_RATE = PLAYBACK_SAMPLE_RATE
+export const CARTESIA_HIGH_QUALITY_SAMPLE_RATE = 24_000
+
+export const CARTESIA_TTS_OUTPUT_FORMATS: Record<CartesiaTTSQuality, CartesiaOutputFormat> = {
+   low: {
+      container: "raw",
+      encoding: "pcm_s16le",
+      sample_rate: CARTESIA_LOW_QUALITY_SAMPLE_RATE,
+   },
+   high: {
+      container: "raw",
+      encoding: "pcm_s16le",
+      sample_rate: CARTESIA_HIGH_QUALITY_SAMPLE_RATE,
+   },
+}
+
+/** Default PCM 16-bit LE output format. Keeps the previous low-quality behaviour. */
+export const CARTESIA_OUTPUT_FORMAT = CARTESIA_TTS_OUTPUT_FORMATS.low
+
+export function getCartesiaOutputFormat(
+   quality: CartesiaTTSQuality = "low",
+): CartesiaOutputFormat {
+   return CARTESIA_TTS_OUTPUT_FORMATS[quality]
+}
+
+export function getCartesiaSampleRate(
+   quality: CartesiaTTSQuality = "low",
+): number {
+   return getCartesiaOutputFormat(quality).sample_rate
+}
 
 // ---------------------------------------------------------------------------
 // Voice agent orchestration

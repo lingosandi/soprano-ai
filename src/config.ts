@@ -145,7 +145,7 @@ export interface CartesiaOutputFormat {
 
 export const CARTESIA_WS_URL = "wss://api.cartesia.ai/tts/websocket"
 export const CARTESIA_VERSION = "2024-06-10"
-export const CARTESIA_MODEL_ID = "sonic-3"
+export const CARTESIA_MODEL_ID = "sonic-3.5"
 export const CARTESIA_VOICE_ID = "6ccbfb76-1fc6-48f7-b71d-91ac6298247b" // Tessa
 
 const CARTESIA_LOW_QUALITY_SAMPLE_RATE = PLAYBACK_SAMPLE_RATE

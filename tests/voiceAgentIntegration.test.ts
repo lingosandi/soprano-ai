@@ -31,7 +31,7 @@ import { describe, expect, test, beforeEach, afterEach } from "vitest"
 import {
     type ToolRegistry,
 } from "../src/tool-registry"
-import { VoiceAgentService } from "../src"
+import { CartesiaTTS, VoiceAgentService } from "../src"
 import type { IAudioPlayer, IASRService, ASRCallbacks, ASRStartOptions, BackgroundToolResult } from "../src"
 import type { ToolCall, ToolDefinition } from "../src/types"
 import { createTestToolRegistry } from "./helpers/createTestToolRegistry"
@@ -437,6 +437,7 @@ function createTestAgent(
         toolRegistry?: ToolRegistry
         backgroundTaskPoller?: () => Promise<BackgroundToolResult[]>
         memory?: any
+        ttsVoiceId?: string
     }
 ): { agent: VoiceAgentService; deps: TestDeps } {
     const player = new MockAudioPlayer()
@@ -460,6 +461,7 @@ function createTestAgent(
         toolRegistry: options?.toolRegistry,
         backgroundTaskPoller: options?.backgroundTaskPoller,
         memory: options?.memory,
+        ttsVoiceId: options?.ttsVoiceId,
     })
 
     agent.on({
@@ -514,6 +516,16 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("VoiceAgentService integration — init", () => {
+    test("passes ttsVoiceId to the default Cartesia TTS", () => {
+        const { mockFetch } = createMockLLMFetch("Hi there!")
+        const voiceId = "a5136bf9-224c-4d76-b823-52bd5efcffcc"
+        const { agent } = createTestAgent(mockFetch, { ttsVoiceId: voiceId })
+        const tts = (agent as unknown as { tts: CartesiaTTS }).tts
+
+        expect(tts.voiceId).toBe(voiceId)
+        agent.destroy()
+    })
+
     test("init transitions connecting → thinking (greeting pipeline)", async () => {
         const { mockFetch } = createMockLLMFetch("Hi there!")
         const { agent, deps } = createTestAgent(mockFetch)

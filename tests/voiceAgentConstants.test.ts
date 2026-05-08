@@ -83,8 +83,8 @@ describe("Voice agent constants — TTS", () => {
         expect(CARTESIA_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     })
 
-    test("CARTESIA_MODEL_ID is a non-empty string", () => {
-        expect(CARTESIA_MODEL_ID.length).toBeGreaterThan(0)
+    test("CARTESIA_MODEL_ID uses Sonic 3.5", () => {
+        expect(CARTESIA_MODEL_ID).toBe("sonic-3.5")
     })
 
     test("CARTESIA_VOICE_ID is a UUID-like string", () => {

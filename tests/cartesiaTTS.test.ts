@@ -102,12 +102,29 @@ describe("CartesiaTTS", () => {
         expect(msg.model_id).toBe(CARTESIA_MODEL_ID)
         expect(msg.voice.mode).toBe("id")
         expect(msg.voice.id).toBe(CARTESIA_VOICE_ID)
+        expect(tts.voiceId).toBe(CARTESIA_VOICE_ID)
         expect(msg.output_format.container).toBe(CARTESIA_OUTPUT_FORMAT.container)
         expect(msg.output_format.encoding).toBe(CARTESIA_OUTPUT_FORMAT.encoding)
         expect(msg.output_format.sample_rate).toBe(CARTESIA_OUTPUT_FORMAT.sample_rate)
         expect(msg.context_id).toBe("ctx-1")
         expect(msg.continue).toBe(true)
         expect(msg.transcript).toBe("Hello ")
+
+        tts.disconnect()
+    })
+
+    test("can send a custom Cartesia voice ID", async () => {
+        const voiceId = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
+        const tts = await createTTS({ voiceId })
+        await tts.connect()
+        const ws = wsInstances[0]
+
+        await tts.sendChunk("ctx-voice", "Hello ", true)
+
+        const msg = JSON.parse(ws.sentMessages[0])
+        expect(msg.voice.mode).toBe("id")
+        expect(msg.voice.id).toBe(voiceId)
+        expect(tts.voiceId).toBe(voiceId)
 
         tts.disconnect()
     })

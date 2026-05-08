@@ -34,12 +34,15 @@ import { toError } from "./audio-helpers"
 // ---------------------------------------------------------------------------
 
 export interface CartesiaTTSOptions {
+    /** Cartesia voice ID for generated speech. Defaults to the package voice. */
+    voiceId?: string
     /** Audio quality for generated PCM. Defaults to low for existing behaviour. */
     quality?: CartesiaTTSQuality
 }
 
 export class CartesiaTTS {
     private apiKey: string
+    private readonly selectedVoiceId: string
     private readonly outputFormat: CartesiaOutputFormat
     private ws: WebSocket | null = null
     private callbacks: CartesiaTTSCallbacks = {}
@@ -73,7 +76,12 @@ export class CartesiaTTS {
 
     constructor(apiKey: string, options: CartesiaTTSOptions = {}) {
         this.apiKey = apiKey
+        this.selectedVoiceId = options.voiceId ?? CARTESIA_VOICE_ID
         this.outputFormat = getCartesiaOutputFormat(options.quality ?? "low")
+    }
+
+    get voiceId(): string {
+        return this.selectedVoiceId
     }
 
     get sampleRate(): number {
@@ -325,7 +333,7 @@ export class CartesiaTTS {
             transcript,
             voice: {
                 mode: "id",
-                id: CARTESIA_VOICE_ID,
+                id: this.selectedVoiceId,
             },
             output_format: this.outputFormat,
             context_id: contextId,

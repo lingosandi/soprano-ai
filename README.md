@@ -23,12 +23,13 @@ const agent = createSopranoVoiceAgent({
 })
 ```
 
-## TTS quality
+## TTS voice and quality
 
-Cartesia TTS defaults to the original low-quality 8 kHz PCM stream. To opt into higher-quality 24 kHz PCM, pass the same quality to the default TTS config and to `AudioStreamPlayer`:
+Cartesia TTS defaults to the package voice and the original low-quality 8 kHz PCM stream. To choose a different Cartesia voice, pass its voice ID as `ttsVoiceId`. To opt into higher-quality 24 kHz PCM, pass the same quality to the default TTS config and to `AudioStreamPlayer`:
 
 ```ts
 const ttsQuality = "high" as const
+const ttsVoiceId = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
 
 const agent = createSopranoVoiceAgent({
   player: new AudioStreamPlayer({ quality: ttsQuality }),
@@ -38,6 +39,7 @@ const agent = createSopranoVoiceAgent({
     cartesiaApiKey: "YOUR_CARTESIA_API_KEY",
   },
   ttsQuality,
+  ttsVoiceId,
 })
 ```
 

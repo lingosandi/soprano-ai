@@ -82,6 +82,8 @@ export interface VoiceAgentDeps {
     llmRequestExtraBody?: Record<string, unknown>
     /** Cartesia PCM quality for the default TTS instance. Defaults to low. */
     ttsQuality?: CartesiaTTSQuality
+    /** Cartesia voice ID for the default TTS instance. Defaults to the package voice. */
+    ttsVoiceId?: string
     /** Pre-created TTS implementation, useful for tests or custom Cartesia settings. */
     tts?: CartesiaTTS
     /** Platform-specific ASR tuning overrides (e.g. longer silence for BLE mics). */
@@ -168,6 +170,7 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         // TTS: Cartesia WebSocket
         this.tts = deps.tts ?? new CartesiaTTS(deps.apiKeys.cartesiaApiKey, {
             quality: deps.ttsQuality,
+            voiceId: deps.ttsVoiceId,
         })
 
         // Platform-specific injected dependencies

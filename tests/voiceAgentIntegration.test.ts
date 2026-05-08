@@ -37,6 +37,10 @@ import type { ToolCall, ToolDefinition } from "../src/types"
 import { createTestToolRegistry } from "./helpers/createTestToolRegistry"
 
 const toolSegment = (payload: string) => ["---tool---", payload].join("\n")
+const TEST_API_KEYS = {
+    qwenApiKey: "test-qwen-key",
+    cartesiaApiKey: "test-cartesia-key",
+}
 
 // ---------------------------------------------------------------------------
 // Mock: AudioContext (required by CartesiaTTS WebSocket)
@@ -451,6 +455,7 @@ function createTestAgent(
     const agent = new VoiceAgentService({
         player,
         asr,
+        apiKeys: TEST_API_KEYS,
         fetchImpl: mockFetch,
         toolRegistry: options?.toolRegistry,
         backgroundTaskPoller: options?.backgroundTaskPoller,
@@ -570,6 +575,7 @@ describe("VoiceAgentService integration — init", () => {
         const agent = new VoiceAgentService({
             player: failPlayer,
             asr,
+            apiKeys: TEST_API_KEYS,
             fetchImpl: mockFetch,
         })
         agent.on({ onStateChange: (s) => states.push(s) })

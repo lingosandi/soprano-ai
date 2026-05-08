@@ -46,24 +46,6 @@ export function createManagedActor<TMachine extends AnyStateMachine>(
 }
 
 /**
- * Helper to read the current state value from a running actor.
- */
-export function getActorState<TMachine extends AnyStateMachine>(
-    actor: Actor<TMachine>,
-): string {
-    return (actor.getSnapshot() as any).value as string
-}
-
-/**
- * Helper to read context from a running actor.
- */
-export function getActorContext<TMachine extends AnyStateMachine>(
-    actor: Actor<TMachine>,
-): any {
-    return (actor.getSnapshot() as any).context
-}
-
-/**
  * Builds a `STATE_TO_EVENT` mapping from a list of state names.
  *
  * Convention: event type is `TO_<UPPER_SNAKE_CASE>` of the state name.

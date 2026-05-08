@@ -13,7 +13,7 @@ import { formatToolCallAsUnixCommand } from "./unix-tooling"
 // ---------------------------------------------------------------------------
 
 /** Default maximum characters for tool result strings. */
-export const MAX_TOOL_RESULT_CHARS = 30_000
+const MAX_TOOL_RESULT_CHARS = 30_000
 const MAX_PRESENTATION_LINES = 200
 const MAX_PRESENTATION_CHARS = 50_000
 

@@ -24,6 +24,10 @@ import type { ToolCall, ToolDefinition } from "../src/types"
 import { createTestToolRegistry } from "./helpers/createTestToolRegistry"
 
 const toolSegment = (payload: string) => ["---tool---", payload].join("\n")
+const TEST_API_KEYS = {
+    qwenApiKey: "test-qwen-key",
+    cartesiaApiKey: "test-cartesia-key",
+}
 
 const TEST_TOOL_DEFINITION: ToolDefinition = {
     name: "LookupItem",
@@ -319,6 +323,7 @@ function makeAgent(
     const svc = new VoiceAgentService({
         player,
         asr,
+        apiKeys: TEST_API_KEYS,
         fetchImpl: fetchFn,
         toolRegistry: opts?.toolRegistry,
         backgroundTaskPoller: opts?.backgroundTaskPoller,
@@ -417,7 +422,7 @@ describe("VoiceAgentService — mic mute API", () => {
             destroy() {},
         }
 
-        const svc = new VoiceAgentService({ player, asr, fetchImpl: fetch })
+        const svc = new VoiceAgentService({ player, asr, apiKeys: TEST_API_KEYS, fetchImpl: fetch })
 
         expect(() => svc.setMicMuted(true)).not.toThrow()
         expect(svc.isMicMuted).toBe(true)
@@ -518,7 +523,7 @@ describe("VoiceAgentService — startListening guard", () => {
         }
 
         const asr = new DelayedStartASR()
-        const svc = new VoiceAgentService({ player, asr, fetchImpl: fetch })
+        const svc = new VoiceAgentService({ player, asr, apiKeys: TEST_API_KEYS, fetchImpl: fetch })
 
         const startPromise = svc.startListening()
         await settle(10)

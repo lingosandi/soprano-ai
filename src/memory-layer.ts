@@ -6,7 +6,7 @@
  *
  * - Generic base class (`BaseMemoryLayer<TState, TMessage>`)
  * - Shared types: `MemoryMessage`, `CompactionCursor`, `MemoryStorage`, etc.
- * - Token estimation strategy (pluggable: tiktoken vs char-based)
+ * - Token estimation strategy (pluggable by injection)
  * - Shared algorithms: sliding-window, buildMessages, triggerCompaction
  *
  * Core Invariants (enforced by this base):
@@ -73,25 +73,12 @@ export interface CompactionCursor {
  * Strategy for estimating token counts.
  *
  * - Workspace agents share the same estimator strategy by default
- * - CharTokenEstimator is the cross-platform baseline implementation
  */
 export interface TokenEstimator {
     /** Estimate token count for a string. */
     estimateTokens(text: string): number
     /** Dispose any resources (e.g. tiktoken WASM). No-op by default. */
     dispose?(): void
-}
-
-/**
- * Character-based token estimator.
- * GPT/Claude average ~4 chars/token for English; 3.5 is conservative.
- */
-export class CharTokenEstimator implements TokenEstimator {
-    constructor(private charsPerToken = 3.5) {}
-
-    estimateTokens(text: string): number {
-        return Math.ceil(text.length / this.charsPerToken)
-    }
 }
 
 // ============================================================================

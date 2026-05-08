@@ -20,7 +20,7 @@ function normalizeToolCallName(name: string): string {
 // Schemas
 // ---------------------------------------------------------------------------
 
-export const ToolCallSchema = z
+const ToolCallSchema = z
     .object({
         kind: z.enum(["tool", "bash", "background_bash"]).optional(),
         name: z.string().min(1, "Tool call name is required"),

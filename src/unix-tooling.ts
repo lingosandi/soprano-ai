@@ -19,12 +19,6 @@ export interface CommandRuntime {
     executeBackgroundBash?(command: string): Promise<ToolResult>
 }
 
-export interface CommandTargetInfo {
-    name: string
-    path?: string
-    command?: string
-}
-
 interface CommandDescriptor {
     command: string
     summary: string
@@ -44,15 +38,15 @@ interface ParsedCommandArgs {
     error?: string
 }
 
-export function isBashToolCall(toolCall: Pick<ToolCall, "name" | "kind">): boolean {
+function isBashToolCall(toolCall: Pick<ToolCall, "name" | "kind">): boolean {
     return toolCall.kind === "bash"
 }
 
-export function isBackgroundBashToolCall(toolCall: Pick<ToolCall, "name" | "kind">): boolean {
+function isBackgroundBashToolCall(toolCall: Pick<ToolCall, "name" | "kind">): boolean {
     return toolCall.kind === "background_bash"
 }
 
-export function resolveToolDefinitionForInvocation(
+function resolveToolDefinitionForInvocation(
     tools: ToolDefinition[],
     invocationName: string,
 ): ToolDefinition | undefined {
@@ -211,18 +205,7 @@ export function enrichToolResultWithUnixMetadata(
     }
 }
 
-export function extractCommandTargets(command: string): string[] {
-    const chain = parseCommandChain(command)
-    if (!chain) {
-        return []
-    }
-
-    return chain.commands
-        .map((tokens) => normalizeCommandName(tokens[0] ?? ""))
-        .filter((value) => value.length > 0)
-}
-
-export function extractPrimaryCommandMetadata(
+function extractPrimaryCommandMetadata(
     command: string,
 ): { name?: string; path?: string; command?: string } {
     const chain = parseCommandChain(command)
@@ -292,58 +275,6 @@ export function parseUnixToolCommand(
     }
 
     return result
-}
-
-export async function executeToolCallWithUnixSupport(
-    runtime: CommandRuntime,
-    toolCall: ToolCall,
-): Promise<ToolResult> {
-    const toolDefinitions = runtime.getToolDefinitions()
-
-    if (isBashToolCall(toolCall)) {
-        return executeUnixCommandString(
-            typeof toolCall.parameters?.command === "string" ? toolCall.parameters.command : "",
-            runtime,
-        )
-    }
-
-    if (isBackgroundBashToolCall(toolCall)) {
-        return executeBackgroundUnixCommandString(
-            typeof toolCall.parameters?.command === "string" ? toolCall.parameters.command : "",
-            runtime,
-        )
-    }
-
-    let effectiveParameters = toolCall.parameters
-    const definition = resolveToolDefinitionForInvocation(toolDefinitions, toolCall.name)
-
-    if (
-        definition &&
-        typeof toolCall.rawInvocation === "string" &&
-        toolCall.rawInvocation.trim().length > 0
-    ) {
-        const parsed = parseUnixToolCommand(definition, toolCall.rawInvocation, {
-            allowTruncated: toolCall.truncated === true,
-        })
-
-        if (parsed.ok) {
-            effectiveParameters = parsed.parameters as Record<string, any>
-        } else {
-            return enrichToolResultWithUnixMetadata(
-                toolCall,
-                {
-                    success: false,
-                    error: parsed.error,
-                    stderr: parsed.error,
-                    exit_code: 1,
-                },
-                toolDefinitions,
-            )
-        }
-    }
-
-    const result = await runtime.executeTool(toolCall.name, effectiveParameters)
-    return enrichToolResultWithUnixMetadata(toolCall, result, toolDefinitions)
 }
 
 export async function executeUnixCommandString(
@@ -424,17 +355,6 @@ export async function executeBackgroundUnixCommandString(
         },
         result,
     )
-}
-
-export function deriveCommandName(name: string): string {
-    if (name.includes("_")) {
-        return name.toLowerCase()
-    }
-
-    return name
-        .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-        .replace(/\s+/g, "-")
-        .toLowerCase()
 }
 
 function buildToolDescriptor(tool: ToolDefinition): CommandDescriptor {

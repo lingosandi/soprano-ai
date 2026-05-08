@@ -65,16 +65,12 @@ export interface VoiceAgentDeps {
     asr: IASRService
     /** Custom fetch for LLM streaming (e.g. expo/fetch on React Native). */
     fetchImpl?: FetchLike
-    /** DashScope/Qwen API key used for the default Qwen LLM provider and FunASR unless asrApiKey overrides it. */
-    qwenApiKey?: string
+    /** Explicit provider credentials. No API keys are read from the environment. */
+    apiKeys: SopranoApiKeys
     /** OpenAI-compatible provider config used for voice turns. No default API key is bundled. */
     llmProviderConfig?: LLMProviderConfig
     /** Optional provider config used for memory compaction. Defaults to llmProviderConfig. */
     compactionProviderConfig?: LLMProviderConfig | null
-    /** DashScope/FunASR API key passed to IASRService.start(). */
-    asrApiKey?: string
-    /** Cartesia API key used by the default CartesiaTTS instance. */
-    cartesiaApiKey?: string
     /** Override the default spoken system prompt. */
     systemPrompt?: string
     /** LLM sampling temperature for voice turns. */
@@ -153,9 +149,8 @@ export class VoiceAgentService extends ToolCallingAgentBase {
     private turnController: VoiceTurnController
 
     constructor(deps: VoiceAgentDeps) {
-        const qwenApiKey = deps.qwenApiKey ?? deps.llmProviderConfig?.apiKey ?? deps.asrApiKey ?? ""
         const llmProviderConfig = deps.llmProviderConfig ?? createQwenPlusProviderConfig({
-            apiKey: qwenApiKey,
+            apiKey: deps.apiKeys.qwenApiKey,
         })
 
         super({
@@ -168,14 +163,14 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         })
 
         // TTS: Cartesia WebSocket
-        this.tts = deps.tts ?? new CartesiaTTS(deps.cartesiaApiKey ?? "")
+        this.tts = deps.tts ?? new CartesiaTTS(deps.apiKeys.cartesiaApiKey)
 
         // Platform-specific injected dependencies
         this.player = deps.player
         this.asr = deps.asr
         this.micMuted = deps.asr.isMicMuted ?? false
         this.asrOverrides = deps.asrOptions ?? {}
-        this.asrApiKey = deps.asrApiKey ?? qwenApiKey
+        this.asrApiKey = deps.apiKeys.asrApiKey ?? deps.apiKeys.qwenApiKey
         this.systemPrompt = deps.systemPrompt ?? VOICE_AGENT_SYSTEM_PROMPT
         this.llmTemperature = deps.llmTemperature ?? VOICE_LLM_TEMPERATURE
         this.llmMaxTokens = deps.llmMaxTokens ?? VOICE_LLM_MAX_TOKENS
@@ -1139,19 +1134,10 @@ export interface SopranoApiKeys {
     asrApiKey?: string
 }
 
-export interface CreateSopranoVoiceAgentOptions
-    extends Omit<VoiceAgentDeps, "qwenApiKey" | "cartesiaApiKey" | "asrApiKey"> {
-    apiKeys: SopranoApiKeys
-}
+export interface CreateSopranoVoiceAgentOptions extends VoiceAgentDeps {}
 
 export function createSopranoVoiceAgent(
     options: CreateSopranoVoiceAgentOptions,
 ): VoiceAgentService {
-    const { apiKeys, ...deps } = options
-    return new VoiceAgentService({
-        ...deps,
-        qwenApiKey: apiKeys.qwenApiKey,
-        asrApiKey: apiKeys.asrApiKey ?? apiKeys.qwenApiKey,
-        cartesiaApiKey: apiKeys.cartesiaApiKey,
-    })
+    return new VoiceAgentService(options)
 }

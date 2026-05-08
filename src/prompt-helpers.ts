@@ -6,7 +6,6 @@
  */
 
 import type { ToolDefinition } from "./types"
-import type { TruncatedToolInfo } from "./agent-machine"
 import { formatToolDefinitions } from "./command-response-utils"
 import {
     getRunCommandPromptAvailability,
@@ -41,6 +40,12 @@ export const SKILL_INVOKE_READ_RULE_LINE =
     "If the user says invoke /skill-name, treat that as asking you to read the skill-name skill with ReadSkill before proceeding."
 export const TODO_LIST_FIRST_RESPONSE_RULE_LINE =
     "You MUST call the manage_todo_list tool in your very first response to plan your work before executing any other tool. Break the task into specific, actionable steps. On subsequent responses, update the todo list to reflect progress."
+
+export interface TruncatedToolInfo {
+    name: string
+    filePath?: string
+    executionSucceeded: boolean
+}
 
 export interface FormatToolsSectionOptions {
     bashAvailable?: boolean

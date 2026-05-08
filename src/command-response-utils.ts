@@ -226,20 +226,13 @@ export function coerceToolCallToDefinition(
         : call
 }
 
-export interface ExtractedRunInvocation {
+interface ExtractedRunInvocation {
     target: "tool" | "bash" | "background_bash"
     command: string
     raw: string
     start: number
     end: number
     truncated: boolean
-}
-
-interface ExtractedRunInvocationPayload {
-    command: string
-    end: number
-    truncated: boolean
-    quoted: boolean
 }
 
 export interface ParsedStructuredAgentText {
@@ -265,66 +258,6 @@ function buildStructuredInvocationHeaderPattern(
     )
 }
 
-function extractInlineTrailingCompatibilityInvocation(
-    content: string,
-    options?: {
-        allowTruncated?: boolean
-        allowedTargets?: readonly RunInvocationTarget[]
-    },
-): ExtractedRunInvocation | null {
-    const allowTruncated = options?.allowTruncated === true
-    const allowedTargets = options?.allowedTargets ?? DEFAULT_ALLOWED_RUN_TARGETS
-    const normalizedTargets = Array.from(new Set(allowedTargets)).filter(
-        (target): target is RunInvocationTarget => SUPPORTED_RUN_TARGETS.includes(target),
-    )
-
-    if (normalizedTargets.length === 0) {
-        return null
-    }
-
-    let lastHeaderMatch: RegExpExecArray | null = null
-    const headerMatcher = new RegExp(`---(${normalizedTargets.join("|")})---`, "gi")
-    let match: RegExpExecArray | null
-
-    while ((match = headerMatcher.exec(content)) !== null) {
-        lastHeaderMatch = match
-    }
-
-    const matchedTarget = lastHeaderMatch?.[1]?.toLowerCase()
-    if (!lastHeaderMatch?.[0] || !matchedTarget) {
-        return null
-    }
-
-    const prefix = content.slice(0, lastHeaderMatch.index).trimEnd()
-    if (!/[.!?]$/.test(prefix)) {
-        return null
-    }
-
-    const payloadSource = content.slice(lastHeaderMatch.index + lastHeaderMatch[0].length)
-    const payloadMatch = payloadSource.match(/^[ \t]+([^\r\n][^\r\n]*?)\s*$/)
-    const normalizedCommand = payloadMatch?.[1]?.trim()
-
-    if (!normalizedCommand) {
-        return null
-    }
-
-    const target = matchedTarget === "tool"
-        ? "tool"
-        : matchedTarget === "background_bash"
-            ? "background_bash"
-            : "bash"
-
-    return {
-        target,
-        command: normalizedCommand,
-        raw: content.slice(lastHeaderMatch.index).trimEnd(),
-        start: lastHeaderMatch.index,
-        end: content.length,
-        truncated: allowTruncated
-            && isLikelyTruncatedShellLikePayload(normalizedCommand),
-    }
-}
-
 export function containsStandaloneStructuredInvocationStart(
     content: string,
     allowedTargets: readonly RunInvocationTarget[] = DEFAULT_ALLOWED_RUN_TARGETS,
@@ -333,7 +266,7 @@ export function containsStandaloneStructuredInvocationStart(
     return matcher.test(content)
 }
 
-export function extractRunInvocations(
+function extractRunInvocations(
     content: string,
     options?: {
         allowTruncated?: boolean
@@ -367,17 +300,6 @@ export function extractRunInvocations(
             start,
             payloadStart,
         })
-    }
-
-    if (headers.length === 0) {
-        const inlineCompatibilityInvocation = extractInlineTrailingCompatibilityInvocation(
-            content,
-            options,
-        )
-
-        if (inlineCompatibilityInvocation) {
-            return [inlineCompatibilityInvocation]
-        }
     }
 
     for (const [index, header] of headers.entries()) {

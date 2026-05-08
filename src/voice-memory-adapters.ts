@@ -83,7 +83,7 @@ export class HttpMemoryAdapter implements VoiceMemoryStorage {
                 headers: { "Content-Type": "application/json" },
                 signal: AbortSignal.timeout(3_000),
             })
-            if (res.status === 204 || res.status === 404) return null
+            if (res.status === 204) return null
             if (!res.ok) return null
             return (await res.json()) as PersistedVoiceMemory
         } catch {

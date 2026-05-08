@@ -57,9 +57,9 @@ function buildMisroutedRunToolValidationError(toolName: string): Error | null {
     return null
 }
 
-export type BackgroundBashAction = "start" | "status" | "logs" | "stop"
+type BackgroundBashAction = "start" | "status" | "logs" | "stop"
 
-export interface ParsedBackgroundBashCommand {
+interface ParsedBackgroundBashCommand {
     action: BackgroundBashAction
     name: string
     rawCommand: string
@@ -227,47 +227,6 @@ function isTranscriptArtifactLine(line: string): boolean {
         || /^[^\s@]+@.+[$#>]$/.test(line)
 }
 
-export function createBackgroundBashDefinition({
-    description,
-    portDescription,
-}: {
-    description: string
-    portDescription: string
-}): ToolDefinition {
-    return {
-        name: "BackgroundBash",
-        description,
-        usageExample: 'BackgroundBash start hello --command "bun server.js" --port 3000',
-        parameters: {
-            action: {
-                type: "string",
-                description: "Background process action: start, status, stop, or logs.",
-                required: true,
-                positional: true,
-                enum: ["start", "status", "stop", "logs"] as const,
-            },
-            name: {
-                type: "string",
-                description: "Stable process name, such as hello or dev-server.",
-                required: true,
-                positional: true,
-            },
-            command: {
-                type: "string",
-                description: "Shell command to start the process. Required only for start.",
-            },
-            port: {
-                type: "number",
-                description: portDescription,
-            },
-            tail_bytes: {
-                type: "number",
-                description: "Optional number of trailing log bytes to return for status or logs.",
-            },
-        },
-    }
-}
-
 export abstract class RunCommand {
     readonly target: RunInvocationTarget
 
@@ -296,7 +255,7 @@ export abstract class RunCommand {
     }
 }
 
-export class ToolRunCommand extends RunCommand {
+class ToolRunCommand extends RunCommand {
     constructor() {
         super("tool")
     }
@@ -373,7 +332,7 @@ export class ToolRunCommand extends RunCommand {
     }
 }
 
-export class BashRunCommand extends RunCommand {
+class BashRunCommand extends RunCommand {
     constructor() {
         super("bash")
     }
@@ -450,7 +409,7 @@ export class BashRunCommand extends RunCommand {
     }
 }
 
-export class BackgroundBashRunCommand extends RunCommand {
+class BackgroundBashRunCommand extends RunCommand {
     constructor() {
         super("background_bash")
     }
@@ -652,42 +611,9 @@ export const DEFAULT_RUN_COMMAND_REGISTRY = new RunCommandRegistry([
     new BackgroundBashRunCommand(),
 ])
 
-export function createCustomRunCommandRegistry(
-    bashCommand: BashRunCommand,
-    backgroundBashCommand: BackgroundBashRunCommand,
-): RunCommandRegistry {
-    return new RunCommandRegistry([
-        new ToolRunCommand(),
-        bashCommand,
-        backgroundBashCommand,
-    ])
-}
-
-export function createRunCommandRuntimeBindings(
-    bashCommand: BashRunCommand,
-    backgroundBashCommand: BackgroundBashRunCommand,
-): {
-    executeBash: (command: string) => Promise<ToolResult>
-    executeBackgroundBash: (command: string) => Promise<ToolResult>
-    runCommandRegistry: RunCommandRegistry
-} {
-    return {
-        executeBash: (command: string) => bashCommand.executeRaw(command),
-        executeBackgroundBash: (command: string) => backgroundBashCommand.executeRaw(command),
-        runCommandRegistry: createCustomRunCommandRegistry(bashCommand, backgroundBashCommand),
-    }
-}
-
 export function getRunCommandPromptAvailability(
     allowedTargets: readonly RunInvocationTarget[],
 ): RunCommandPromptAvailability {
     return DEFAULT_RUN_COMMAND_REGISTRY.getPromptAvailability(allowedTargets)
 }
 
-export async function executeToolCallWithRunCommands(
-    runtime: CommandRuntime,
-    toolCall: ToolCall,
-    commandRegistry: RunCommandRegistry = DEFAULT_RUN_COMMAND_REGISTRY,
-): Promise<ToolResult> {
-    return commandRegistry.executeToolCall(runtime, toolCall)
-}

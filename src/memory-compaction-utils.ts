@@ -53,7 +53,7 @@ export function buildCompactionEntry<T>(options: {
     )
 }
 
-export function sanitizeMemoryProvenance(
+function sanitizeMemoryProvenance(
     value: unknown,
     fallback: MemoryProvenance,
 ): MemoryProvenance {
@@ -73,7 +73,7 @@ export function sanitizeMemoryProvenance(
     }
 }
 
-export function cleanCompactionText(text: string): string {
+function cleanCompactionText(text: string): string {
     return text.trim().replace(/\s+/g, " ").replace(/[.?!:;]+$/, "")
 }
 
@@ -154,26 +154,12 @@ export function selectLatestMatchingByKey<T>(
     )
 }
 
-export function limitEntriesByRecency<T>(
-    entries: T[],
-    limit: number,
-    recencyOf: (entry: T) => number,
-): T[] {
-    if (entries.length <= limit) {
-        return entries
-    }
-
-    return [...entries]
-        .sort((a, b) => recencyOf(a) - recencyOf(b))
-        .slice(-limit)
-}
-
 export function formatMemoryMetadataTag(metadata: MemoryMetadataLike): string {
     const detail = metadata.provenance.detail ? `/${metadata.provenance.detail}` : ""
     return ` [${metadata.provenance.source}${detail}]`
 }
 
-export function sanitizeCompactionEntries<T>(
+function sanitizeCompactionEntries<T>(
     input: unknown,
     options: {
         fromString?: (value: string) => T | null
@@ -227,7 +213,7 @@ export function createEntrySanitizer<T>(options: {
         })
 }
 
-export function parseCompactionJsonObject(raw: string): Record<string, unknown> | null {
+function parseCompactionJsonObject(raw: string): Record<string, unknown> | null {
     try {
         const cleaned = raw.replace(/```json\n?|```\n?/gi, "").trim()
         const parsed = JSON.parse(cleaned)

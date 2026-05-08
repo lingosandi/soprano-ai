@@ -144,13 +144,6 @@ describe("HttpMemoryAdapter — load", () => {
         expect(result).toBeNull()
     })
 
-    test("returns null on legacy 404 empty memory", async () => {
-        mockFetch(async () => new Response("Not Found", { status: 404 }))
-
-        const result = await adapter.load()
-        expect(result).toBeNull()
-    })
-
     test("returns null on server error (500)", async () => {
         mockFetch(async () => new Response("Error", { status: 500 }))
 

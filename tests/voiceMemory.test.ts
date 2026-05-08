@@ -73,7 +73,6 @@ async function createLayer(storage?: VoiceMemoryStorage): Promise<VoiceMemoryLay
         compactionTokenThreshold: TEST_COMPACTION_THRESHOLD,
         protectedContextTokens: TEST_PROTECTED_CONTEXT,
         stateBudgetTokens: TEST_STATE_BUDGET,
-        maxRawHistory: 500,
     }))
 }
 
@@ -149,6 +148,16 @@ describe("VoiceMemoryLayer — appendMessage", () => {
         layer.appendMessage("tool", JSON.stringify({ tool: "Hammer", output: "done", success: true }))
         expect(layer.getRawHistoryLength()).toBe(1)
         expect(layer.getRawHistory()[0].role).toBe("tool")
+    })
+
+    test("does not prune raw history by message count", async () => {
+        const layer = await createLayer()
+        for (let i = 0; i < 250; i++) {
+            layer.appendMessage("user", `message ${i}`)
+        }
+
+        expect(layer.getRawHistoryLength()).toBe(250)
+        expect(layer.getRawHistory()[0].content).toBe("message 0")
     })
 })
 
@@ -357,7 +366,6 @@ describe("VoiceMemoryLayer — compaction", () => {
             compactionTokenThreshold: 2_000,
             protectedContextTokens: 300,
             stateBudgetTokens: TEST_STATE_BUDGET,
-            maxRawHistory: 500,
         }))
 
         layer.appendMessage("user", "Search for something about weather patterns and climate change")
@@ -638,7 +646,6 @@ describe("VoiceMemoryLayer — LLM compaction", () => {
             compactionTokenThreshold: TEST_COMPACTION_THRESHOLD,
             protectedContextTokens: TEST_PROTECTED_CONTEXT,
             stateBudgetTokens: TEST_STATE_BUDGET,
-            maxRawHistory: 500,
         }))
         // Static context adds ~45,000 tiktoken tokens to the estimate
         layer.setStaticContext("Context: " + "This is background information about the user and environment. ".repeat(4500))

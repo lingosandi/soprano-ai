@@ -120,8 +120,6 @@ export interface MemoryLayerConfig {
     protectedContextTokens: number
     /** Maximum tokens for the rendered compressed state. */
     stateBudgetTokens: number
-    /** Hard cap on raw history entries (safety net). */
-    maxRawHistory: number
     /** Minimum turns between compaction attempts. */
     compactionDebounceTurns: number
     /** Baseline token overhead for system prompt (conservative estimate). */
@@ -149,7 +147,7 @@ export interface MemoryLayerConfig {
  * - State rendering (converting TState to human-readable text)
  *
  * The base class provides:
- * - Append-only raw history with hard cap enforcement
+ * - Append-only raw history
  * - Token-budgeted sliding window for recent messages
  * - buildMessages assembly (system → state → recent)
  * - Compaction triggering (debounce, threshold check, prune)
@@ -268,16 +266,6 @@ export abstract class BaseMemoryLayer<
         const timestamp = Date.now()
         const msg = this.createMessage(id, role, content, this.currentTurn, timestamp)
         this.rawHistory.push(msg)
-
-        // Hard cap enforcement
-        if (this.rawHistory.length > this.config.maxRawHistory) {
-            const excess = this.rawHistory.length - this.config.maxRawHistory
-            const lastPrunedTurn = this.rawHistory[excess - 1].turn
-            this.rawHistory.splice(0, excess)
-            if (this.compactionCursor.lastCompactedTurn < lastPrunedTurn) {
-                this.compactionCursor.lastCompactedTurn = lastPrunedTurn
-            }
-        }
 
         this.onMessageAppended(msg)
         return id

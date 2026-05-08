@@ -65,9 +65,6 @@ export const VOICE_STATE_BUDGET_TOKENS = Math.floor(VOICE_MAX_CONTEXT_TOKENS * 0
 /** Conservative token estimate for the system prompt. */
 export const VOICE_SYSTEM_PROMPT_OVERHEAD = 4_000
 
-/** Hard cap on raw history entries (safety net). */
-export const VOICE_MAX_RAW_HISTORY = 200
-
 /** Minimum turns between compaction attempts. */
 export const VOICE_COMPACTION_DEBOUNCE_TURNS = 3
 

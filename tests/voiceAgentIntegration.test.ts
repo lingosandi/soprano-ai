@@ -611,11 +611,50 @@ describe("VoiceAgentService integration — init", () => {
         agent.destroy()
     })
 
-    test("init passes configured greeting message as LLM guidance", async () => {
-        const generatedGreeting = "Fresh generated greeting."
-        const { mockFetch, calls } = createMockLLMFetch(generatedGreeting)
+    test("init speaks configured greeting message exactly without calling the LLM", async () => {
+        const { mockFetch, calls } = createMockLLMFetch("This should not be used")
         const greetingMessage = "Hey, I'm ready when you are."
         const { agent, deps } = createTestAgent(mockFetch, { greetingMessage })
+
+        await agent.init()
+        await settle(200)
+
+        expect(calls.length).toBe(0)
+        expect(deps.fullResponses).toContain(greetingMessage)
+        expect(deps.partials).toContain(greetingMessage)
+        expect(deps.player.enqueuedChunks.length).toBeGreaterThan(0)
+        expect(deps.asr.startCallCount).toBeGreaterThanOrEqual(1)
+        agent.destroy()
+    })
+
+    test("init generates returning-user greeting via the LLM", async () => {
+        const returningGreeting = "Welcome back. I'm ready to continue."
+        const { mockFetch, calls } = createMockLLMFetch(returningGreeting)
+        const memoryAdapter = {
+            load: async () => ({
+                rawHistory: [
+                    {
+                        id: "msg-1",
+                        role: "user" as const,
+                        content: "hello from an earlier session",
+                        timestamp: Date.now(),
+                        turn: 1,
+                        tokenCount: 5,
+                        charCount: 29,
+                    },
+                ],
+                compressedState: {},
+                compactionCursor: { lastCompactedTurn: 0 },
+                currentTurn: 1,
+                compactionCount: 0,
+            }),
+            save: async () => {},
+            clear: async () => {},
+        }
+        const { agent, deps } = createTestAgent(mockFetch, {
+            greetingMessage: "Hey, I'm ready when you are.",
+            memory: memoryAdapter,
+        })
 
         await agent.init()
         await settle(200)
@@ -623,10 +662,11 @@ describe("VoiceAgentService integration — init", () => {
         expect(calls.length).toBeGreaterThan(0)
         const body = JSON.parse(calls[0].init.body)
         const messages = JSON.stringify(body.messages)
-        expect(messages).toContain(greetingMessage)
-        expect(messages).toContain("do not repeat it verbatim")
-        expect(deps.fullResponses).toContain(generatedGreeting)
-        expect(deps.fullResponses).not.toContain(greetingMessage)
+        expect(messages).toContain("The user just reconnected to the voice agent")
+        expect(messages).toContain("Do NOT say this is your first conversation")
+        expect(messages).not.toContain("Hey, I'm ready when you are.")
+        expect(deps.fullResponses).toContain(returningGreeting)
+        expect(deps.fullResponses).not.toContain("Hey, I'm ready when you are.")
         expect(deps.player.enqueuedChunks.length).toBeGreaterThan(0)
         expect(deps.asr.startCallCount).toBeGreaterThanOrEqual(1)
         agent.destroy()

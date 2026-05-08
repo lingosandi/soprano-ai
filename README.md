@@ -25,7 +25,7 @@ const agent = createSopranoVoiceAgent({
 
 ## Prompt and greeting
 
-Use `systemPrompt` to replace the default voice-agent persona. Use `greetingMessage` to guide the greeting generated during `init()`; the LLM still writes a fresh greeting and should not repeat this text verbatim every time:
+Use `systemPrompt` to replace the default voice-agent persona. Use `greetingMessage` to make first-time `init()` speak an exact greeting line. If persisted memory shows the user is returning, `init()` asks the LLM to generate a brief returning-user greeting instead:
 
 ```ts
 const agent = createSopranoVoiceAgent({

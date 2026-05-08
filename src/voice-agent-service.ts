@@ -74,7 +74,7 @@ export interface VoiceAgentDeps {
     compactionProviderConfig?: LLMProviderConfig | null
     /** Override the default spoken system prompt. */
     systemPrompt?: string
-    /** Greeting guidance passed to the LLM during init(); not spoken verbatim. */
+    /** Exact greeting line spoken during first-time init(). Returning users skip greeting. */
     greetingMessage?: string
     /** LLM sampling temperature for voice turns. */
     llmTemperature?: number
@@ -840,22 +840,37 @@ export class VoiceAgentService extends ToolCallingAgentBase {
      * automatically.
      */
     private async speakGreeting(): Promise<void> {
+        const hasHistory = this.memory
+            ? this.memory.getCurrentTurn() > 0
+            : this.conversationHistory.length > 1
+
+        if (hasHistory) {
+            this.callbacks.onLog?.("Generating returning-user LLM greeting…")
+            await this.appendHistoryMessage({
+                role: "tool",
+                content: JSON.stringify({
+                    note: "The user just reconnected to the voice agent. They are a returning user — you have memory of prior sessions (see Conversation Memory above). Generate a brief, natural greeting that acknowledges this is a continuing relationship. Do NOT say this is your first conversation.",
+                }),
+                reason: "Voice greeting memory sync failed",
+                fallbackHistory: this.conversationHistory,
+            })
+
+            await this.processUserInput("", true)
+            return
+        }
+
+        if (this.greetingMessage) {
+            await this.speakConfiguredGreetingMessage(this.greetingMessage)
+            return
+        }
+
         this.callbacks.onLog?.("Generating LLM greeting…")
 
         // Inject a greeting instruction (same pattern as
         // drainAndAnnounceCompletions — tool message + processUserInput).
-        // When memory has prior history, tell the LLM this is a returning
-        // user so it doesn't claim "this is our first conversation".
-        const hasHistory = this.memory
-            ? this.memory.getCurrentTurn() > 0
-            : this.conversationHistory.length > 1
-        const baseNote = hasHistory
-            ? "The user just reconnected to the voice agent. They are a returning user — you have memory of prior sessions (see Conversation Memory above). Generate a brief, natural greeting that acknowledges this is a continuing relationship. Do NOT say this is your first conversation."
-            : "The user just connected to the voice agent for the first time. Generate a brief, natural greeting (one short sentence). Vary your phrasing — don't repeat the same greeting every time."
-        const note = this.greetingMessage
-            ? `${baseNote} Use this configured greeting reference for tone, content, or positioning, but do not repeat it verbatim every time: ${this.greetingMessage}`
-            : baseNote
-        const instruction = JSON.stringify({ note })
+        const instruction = JSON.stringify({
+            note: "The user just connected to the voice agent for the first time. Generate a brief, natural greeting (one short sentence). Vary your phrasing — don't repeat the same greeting every time.",
+        })
         await this.appendHistoryMessage({
             role: "tool",
             content: instruction,
@@ -864,6 +879,52 @@ export class VoiceAgentService extends ToolCallingAgentBase {
         })
 
         await this.processUserInput("", true)
+    }
+
+    private async speakConfiguredGreetingMessage(message: string): Promise<void> {
+        this.callbacks.onLog?.("Speaking configured greeting…")
+
+        await this.appendHistoryMessage({
+            role: "assistant",
+            content: message,
+            reason: "Voice greeting memory sync failed",
+            fallbackHistory: this.conversationHistory,
+        })
+
+        this.callbacks.onPartialResponse?.(message)
+        this.callbacks.onFullResponse?.(message)
+
+        this.abortController = new AbortController()
+        const { signal } = this.abortController
+        const contextId = `ctx-${++this.contextCounter}-${Date.now()}`
+        this.currentContextId = contextId
+        this.prepareVoiceTurn()
+
+        await this.tts.sendChunk(contextId, message, true)
+        await this.tts.flush(contextId)
+        await this.tts.waitForContextDone(contextId)
+        await this.player.waitForEnd()
+
+        if (signal.aborted) {
+            return
+        }
+
+        this.currentContextId = null
+
+        if (this.pendingAnnouncements.length > 0) {
+            this.drainAndAnnounceCompletions()
+            return
+        }
+
+        if (this.continuousMode && !this.isMicMuted) {
+            this.callbacks.onLog?.("Playback done — restarting mic")
+            this.setState("idle")
+            this.startListening(true).catch((e) =>
+                this.callbacks.onError?.(toError(e)),
+            )
+        } else {
+            this.setState("idle")
+        }
     }
 
     /**
